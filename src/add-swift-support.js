@@ -33,6 +33,8 @@ module.exports = function(context) {
 
       var bridgingHeaderPath;
       var bridgingHeaderContent;
+      var swift2objHeaderPath;
+      var swift2objcHeaderContent;
       var projectName;
       var projectPath;
       var pluginsPath;
@@ -71,6 +73,21 @@ module.exports = function(context) {
         '#import <Cordova/CDV.h>' ];
         fs.writeFileSync(bridgingHeaderPath, bridgingHeaderContent.join('\n'), { encoding: 'utf-8', flag: 'w' });
         xcodeProject.addHeaderFile('Bridging-Header.h');
+      }
+
+      swift2objHeaderPath = getSwift2ObjcHeaderPath(context, projectPath, iosPlatformVersion);
+
+      try{
+        fs.statSync(swift2objHeaderPath);
+      } catch(err) {
+        // If the bridging header doesn't exist, we create it with the minimum
+        // Cordova/CDV.h import.
+        swift2objcHeaderContent = [ '//',
+        '//  Use this file to import your target\'s public headers that you would like to expose to Swift.',
+        '//',
+        '#import "' + projectName.replace(' ', '_') + '-Swift.h"' ];
+        fs.writeFileSync(swift2objHeaderPath, swift2objcHeaderContent.join('\n'), { encoding: 'utf-8', flag: 'w' });
+        xcodeProject.addHeaderFile('Swift2Objc-Header.h');
       }
 
       var bridgingHeaderProperty = '"$(PROJECT_DIR)/$(PROJECT_NAME)' + bridgingHeaderPath.split(projectPath)[1] + '"';
@@ -145,4 +162,16 @@ function getBridgingHeaderPath(context, projectPath, iosPlatformVersion) {
   }
 
   return bridgingHeaderPath;
+}
+
+function getSwift2ObjcHeaderPath(context, projectPath, iosPlatformVersion) {
+  var semver = context.requireCordovaModule('semver');
+  var headerPath;
+  if(semver.lt(iosPlatformVersion, '4.0.0')) {
+    headerPath = path.posix.join(projectPath, 'Plugins', 'Swift2Objc-Header.h');
+  } else {
+    headerPath = path.posix.join(projectPath, 'Swift2Objc-Header.h');
+  }
+
+  return headerPath;
 }

@@ -19,6 +19,19 @@ As an example you can have a look at this [plugin](https://github.com/akofman/co
 
 If the `cordova-plugin-add-swift-support` plugin is already installed to your project, then you can add your own Swift plugin as usual, its prefixed Bridging-Header will be automatically found and merged.
 
+## Importing Swift into ObjectiveC code
+
+Because **ProductModuleName** of application using some Swift Cordova plugin is different than **ProductModuleName** of the
+plugin itself, you need to modify your ***.m*** files imports to:
+
+```
+#import "Swift2Objc-Header.h"
+```
+
+\* instead of ~~#import "ProductModuleName-Swift.h"~~
+
+This header will be created by this plugin and automatically registered with xcode project.
+
 ## License
 
 Apache-2.0 © [Alexis Kofman](http://twitter.com/alexiskofman)
