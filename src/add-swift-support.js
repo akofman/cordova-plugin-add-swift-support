@@ -111,10 +111,21 @@ module.exports = function(context) {
           console.log('Update IOS build setting EMBEDDED_CONTENT_CONTAINS_SWIFT to: YES');
         }
 
-        if(xcodeProject.getBuildProperty('LD_RUNPATH_SEARCH_PATHS') !== '"@executable_path/Frameworks"') {
-          xcodeProject.updateBuildProperty('LD_RUNPATH_SEARCH_PATHS','"@executable_path/Frameworks"');
-          console.log('Update IOS build setting LD_RUNPATH_SEARCH_PATHS to: @executable_path/Frameworks');
+        function addRunpathSearchBuildProperty(proj, build) {
+            const LD_RUNPATH_SEARCH_PATHS = proj.getBuildProperty('LD_RUNPATH_SEARCH_PATHS', build);
+            if (!LD_RUNPATH_SEARCH_PATHS) {
+                proj.addBuildProperty('LD_RUNPATH_SEARCH_PATHS', '\"@executable_path/Frameworks\"', build);
+                console.log('Add IOS build setting LD_RUNPATH_SEARCH_PATHS to: @executable_path/Frameworks', '('+build.toUpperCase()+')');
+            } else if (LD_RUNPATH_SEARCH_PATHS.indexOf('@executable_path/Frameworks') == -1) {
+                var newValue = LD_RUNPATH_SEARCH_PATHS.substr(0, LD_RUNPATH_SEARCH_PATHS.length - 1);
+                newValue += ' @executable_path/Frameworks\"';
+                proj.updateBuildProperty("LD_RUNPATH_SEARCH_PATHS", newValue, build);
+                console.log('Update IOS build setting LD_RUNPATH_SEARCH_PATHS to: @executable_path/Frameworks', '('+build.toUpperCase()+')');
+            }
         }
+
+        addRunpathSearchBuildProperty(xcodeProject, 'Debug');
+        addRunpathSearchBuildProperty(xcodeProject, 'Release');
 
         fs.writeFileSync(pbxprojPath, xcodeProject.writeSync());
       });
