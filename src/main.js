@@ -58,6 +58,13 @@ export default (context) => {
         return;
       }
 
+      var semver = context.requireCordovaModule('semver');
+      if (!semver.valid(iosPlatformVersion)) {
+
+        iosPlatformVersion = __non_webpack_require__( path.resolve(  platformPath, 'cordova' , 'version') ).version;
+
+      }
+
       projectName = config.name();
       projectPath = path.join(platformPath, projectName);
       pbxprojPath = path.join(platformPath, projectName + '.xcodeproj', 'project.pbxproj');
