@@ -60,7 +60,8 @@ export default (context) => {
 
       var semver = context.requireCordovaModule('semver');
       if (!semver.valid(iosPlatformVersion)) {
-        iosPlatformVersion = __non_webpack_require__(path.resolve(platformPath, 'cordova', 'version') ).version;
+//        iosPlatformVersion = global.require(path.resolve(platformPath, 'cordova', 'version')).version;
+        iosPlatformVersion = __non_webpack_require__(path.resolve(platformPath, 'cordova', 'version')).version;
       }
 
       projectName = config.name();

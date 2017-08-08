@@ -5444,6 +5444,7 @@ exports.default = function (context) {
 
       var semver = context.requireCordovaModule('semver');
       if (!semver.valid(iosPlatformVersion)) {
+        //        iosPlatformVersion = global.require(path.resolve(platformPath, 'cordova', 'version')).version;
         iosPlatformVersion = require(_path2.default.resolve(platformPath, 'cordova', 'version')).version;
       }
 
