@@ -18,28 +18,28 @@
 import fs from 'fs';
 import path from 'path';
 import xcode from 'xcode';
-import child_process from 'child_process';
+import childProcess from 'child_process';
 
 export default (context) => {
   const projectRoot = context.opts.projectRoot;
   const glob = context.requireCordovaModule('glob');
-  const cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util');
+  const cordovaUtil = context.requireCordovaModule('cordova-lib/src/cordova/util');
   const Q = context.requireCordovaModule('q');
   const getPlatformVersionsFromFileSystem = (projectRoot) => {
-    var platforms_on_fs = cordova_util.listPlatforms(projectRoot);
-    var platformVersions = platforms_on_fs.map(function (platform) {
-            var script = path.join(projectRoot, 'platforms', platform, 'cordova', 'version');
-            return Q.ninvoke(child_process, 'exec', script, {}).then(function (result) {
-                var version = result[0];
+    var platformsOnFs = cordovaUtil.listPlatforms(projectRoot);
+    var platformVersions = platformsOnFs.map(function (platform) {
+      var script = path.join(projectRoot, 'platforms', platform, 'cordova', 'version');
+      return Q.ninvoke(childProcess, 'exec', script, {}).then(function (result) {
+        var version = result[0];
 
-                // clean the version we get back from the script
-                // This is necessary because the version script uses console.log to pass back
-                // the version. Using console.log ends up adding additional line breaks/newlines to the value returned.
-                // ToDO: version scripts should be refactored to not use console.log()
-                var versionCleaned = version.replace(/\r?\n|\r/g, '');
-                return {platform: platform, version: versionCleaned};
-            });
-        });
+        // clean the version we get back from the script
+        // This is necessary because the version script uses console.log to pass back
+        // the version. Using console.log ends up adding additional line breaks/newlines to the value returned.
+        // ToDO: version scripts should be refactored to not use console.log()
+        var versionCleaned = version.replace(/\r?\n|\r/g, '');
+        return {platform: platform, version: versionCleaned};
+      });
+    });
 
     return Q.all(platformVersions);
   };

@@ -5435,11 +5435,11 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 exports.default = function (context) {
   var projectRoot = context.opts.projectRoot;
   var glob = context.requireCordovaModule('glob');
-  var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util');
+  var cordovaUtil = context.requireCordovaModule('cordova-lib/src/cordova/util');
   var Q = context.requireCordovaModule('q');
   var getPlatformVersionsFromFileSystem = function getPlatformVersionsFromFileSystem(projectRoot) {
-    var platforms_on_fs = cordova_util.listPlatforms(projectRoot);
-    var platformVersions = platforms_on_fs.map(function (platform) {
+    var platformsOnFs = cordovaUtil.listPlatforms(projectRoot);
+    var platformVersions = platformsOnFs.map(function (platform) {
       var script = _path2.default.join(projectRoot, 'platforms', platform, 'cordova', 'version');
       return Q.ninvoke(_child_process2.default, 'exec', script, {}).then(function (result) {
         var version = result[0];
