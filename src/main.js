@@ -18,18 +18,38 @@
 import fs from 'fs';
 import path from 'path';
 import xcode from 'xcode';
+import child_process from 'child_process';
 
 export default (context) => {
-  const platformMetadata = context.requireCordovaModule('cordova-lib/src/cordova/platform_metadata');
   const projectRoot = context.opts.projectRoot;
   const glob = context.requireCordovaModule('glob');
+  const cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util');
+  const Q = context.requireCordovaModule('q');
+  const getPlatformVersionsFromFileSystem = (projectRoot) => {
+    var platforms_on_fs = cordova_util.listPlatforms(projectRoot);
+    var platformVersions = platforms_on_fs.map(function (platform) {
+            var script = path.join(projectRoot, 'platforms', platform, 'cordova', 'version');
+            return Q.ninvoke(child_process, 'exec', script, {}).then(function (result) {
+                var version = result[0];
+
+                // clean the version we get back from the script
+                // This is necessary because the version script uses console.log to pass back
+                // the version. Using console.log ends up adding additional line breaks/newlines to the value returned.
+                // ToDO: version scripts should be refactored to not use console.log()
+                var versionCleaned = version.replace(/\r?\n|\r/g, '');
+                return {platform: platform, version: versionCleaned};
+            });
+        });
+
+    return Q.all(platformVersions);
+  };
 
   // This script has to be executed depending on the command line arguments, not
   // on the hook execution cycle.
   if ((context.hook === 'after_platform_add' && context.cmdLine.includes('platform add')) ||
   (context.hook === 'after_prepare' && context.cmdLine.includes('prepare')) ||
   (context.hook === 'after_plugin_add' && context.cmdLine.includes('plugin add'))) {
-    platformMetadata.getPlatformVersions(projectRoot).then((platformVersions) => {
+    getPlatformVersionsFromFileSystem(projectRoot).then((platformVersions) => {
       const IOS_MIN_DEPLOYMENT_TARGET = '7.0';
       const platformPath = path.join(projectRoot, 'platforms', 'ios');
       const config = getConfigParser(context, path.join(projectRoot, 'config.xml'));
@@ -56,12 +76,6 @@ export default (context) => {
 
       if (!iosPlatformVersion) {
         return;
-      }
-
-      var semver = context.requireCordovaModule('semver');
-      if (!semver.valid(iosPlatformVersion)) {
-//        iosPlatformVersion = global.require(path.resolve(platformPath, 'cordova', 'version')).version;
-        iosPlatformVersion = __non_webpack_require__(path.resolve(platformPath, 'cordova', 'version')).version;
       }
 
       projectName = config.name();
