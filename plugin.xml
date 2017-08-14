@@ -15,4 +15,8 @@
     <hook type="after_platform_add" src="add-swift-support.js" />
     <hook type="after_plugin_add" src="add-swift-support.js" />
   </platform>
+  <platform name="osx">
+    <hook type="after_platform_add" src="add-swift-support.js" />
+    <hook type="after_plugin_add" src="add-swift-support.js" />
+  </platform>
 </plugin>
