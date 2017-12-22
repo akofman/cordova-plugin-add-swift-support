@@ -20,7 +20,7 @@ import path from 'path';
 import xcode from 'xcode';
 
 export default (context) => {
-  const platformMetadata = context.requireCordovaModule('cordova-lib/src/cordova/platform_metadata');
+  const platformMetadata = context.requireCordovaModule('cordova-lib/src/cordova/project_metadata');
   const projectRoot = context.opts.projectRoot;
   const glob = context.requireCordovaModule('glob');
 
@@ -29,7 +29,7 @@ export default (context) => {
   if ((context.hook === 'after_platform_add' && context.cmdLine.includes('platform add')) ||
   (context.hook === 'after_prepare' && context.cmdLine.includes('prepare')) ||
   (context.hook === 'after_plugin_add' && context.cmdLine.includes('plugin add'))) {
-    platformMetadata.getPlatformVersions(projectRoot).then((platformVersions) => {
+    platformMetadata.getPlatforms(projectRoot).then((platformVersions) => {
       const IOS_MIN_DEPLOYMENT_TARGET = '7.0';
       const platformPath = path.join(projectRoot, 'platforms', 'ios');
       const config = getConfigParser(context, path.join(projectRoot, 'config.xml'));
