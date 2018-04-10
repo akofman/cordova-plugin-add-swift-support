@@ -16,11 +16,11 @@ Or add it as a dependency into your own plugin:
 
 `<dependency id="cordova-plugin-add-swift-support" version="1.7.2"/>`
 
-By default, the Swift 3 support is added but the legacy version (2.3) can still be configured as a preference:
+By default, the Swift 3 support is added but the legacy version (2.3) can still be configured as a preference, inside the project's `config.xml`, within the `<platform name="ios">` section:
 
 `<preference name="UseLegacySwiftLanguageVersion" value="true" />`
 
-Or it is possible to specify the version as following:
+Or it is possible to specify the version as following, inside the project's `config.xml`, within the `<platform name="ios">` section:
 
 `<preference name="UseSwiftLanguageVersion" value="4" />`
 
