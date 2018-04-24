@@ -12759,7 +12759,6 @@ exports.default = function (context) {
   if (context.hook === 'after_platform_add' && context.cmdLine.includes('platform add') || context.hook === 'after_prepare' && context.cmdLine.includes('prepare') || context.hook === 'after_plugin_add' && context.cmdLine.includes('plugin add')) {
     getPlatformVersionsFromFileSystem(context, projectRoot).then(function (platformVersions) {
       var IOS_MIN_DEPLOYMENT_TARGET = '7.0';
-      var platformPath = _path2.default.join(projectRoot, 'platforms', 'ios');
       var config = getConfigParser(context, _path2.default.join(projectRoot, 'config.xml'));
 
       var bridgingHeaderPath = void 0;
@@ -12768,6 +12767,7 @@ exports.default = function (context) {
       var projectPath = void 0;
       var pluginsPath = void 0;
       var iosPlatformVersion = void 0;
+      var osxPlatformVersion = void 0;
       var pbxprojPath = void 0;
       var xcodeProject = void 0;
 
@@ -12780,113 +12780,126 @@ exports.default = function (context) {
         if (platformVersion.platform === 'ios') {
           iosPlatformVersion = platformVersion.version;
         }
+        if (platformVersion.platform === 'osx') {
+          osxPlatformVersion = platformVersion.version;
+        }
       });
 
-      if (!iosPlatformVersion) {
+      if (!iosPlatformVersion && !osxPlatformVersion) {
         return;
       }
 
-      projectName = config.name();
-      projectPath = _path2.default.join(platformPath, projectName);
-      pbxprojPath = _path2.default.join(platformPath, projectName + '.xcodeproj', 'project.pbxproj');
-      xcodeProject = _xcode2.default.project(pbxprojPath);
-      pluginsPath = _path2.default.join(projectPath, 'Plugins');
+      for (var platformName in {'ios': 'ios', 'osx': 'osx'}) {
+        if (platformName == 'ios' && iosPlatformVersion || platformName == 'osx' && osxPlatformVersion) {
+          var platformPath = _path2.default.join(projectRoot, 'platforms', platformName);
+          projectName = config.name();
+          projectPath = _path2.default.join(platformPath, projectName);
+          pbxprojPath = _path2.default.join(platformPath, projectName + '.xcodeproj', 'project.pbxproj');
+          xcodeProject = _xcode2.default.project(pbxprojPath);
+          pluginsPath = _path2.default.join(projectPath, 'Plugins');
 
-      xcodeProject.parseSync();
+          xcodeProject.parseSync();
 
-      bridgingHeaderPath = getBridgingHeaderPath(context, projectPath, iosPlatformVersion);
-
-      try {
-        _fs2.default.statSync(bridgingHeaderPath);
-      } catch (err) {
-        // If the bridging header doesn't exist, we create it with the minimum
-        // Cordova/CDV.h import.
-        bridgingHeaderContent = ['//', '//  Use this file to import your target\'s public headers that you would like to expose to Swift.', '//', '#import <Cordova/CDV.h>'];
-        _fs2.default.writeFileSync(bridgingHeaderPath, bridgingHeaderContent.join('\n'), { encoding: 'utf-8', flag: 'w' });
-        xcodeProject.addHeaderFile('Bridging-Header.h');
-      }
-
-      buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
-
-      var bridgingHeaderProperty = '"$(PROJECT_DIR)/$(PROJECT_NAME)' + bridgingHeaderPath.split(projectPath)[1] + '"';
-
-      for (configName in buildConfigs) {
-        if (!COMMENT_KEY.test(configName)) {
-          buildConfig = buildConfigs[configName];
-          if (xcodeProject.getBuildProperty('SWIFT_OBJC_BRIDGING_HEADER', buildConfig.name) !== bridgingHeaderProperty) {
-            xcodeProject.updateBuildProperty('SWIFT_OBJC_BRIDGING_HEADER', bridgingHeaderProperty, buildConfig.name);
-            console.log('Update IOS build setting SWIFT_OBJC_BRIDGING_HEADER to:', bridgingHeaderProperty, 'for build configuration', buildConfig.name);
+          if (platformName == 'ios') {
+              bridgingHeaderPath = getBridgingHeaderPath(context, projectPath, iosPlatformVersion);
           }
-        }
-      }
-
-      // Look for any bridging header defined in the plugin
-      glob('**/*Bridging-Header*.h', { cwd: pluginsPath }, function (error, files) {
-        var bridgingHeader = _path2.default.basename(bridgingHeaderPath);
-        var headers = files.map(function (filePath) {
-          return _path2.default.basename(filePath);
-        });
-
-        // if other bridging headers are found, they are imported in the
-        // one already configured in the project.
-        var content = _fs2.default.readFileSync(bridgingHeaderPath, 'utf-8');
-
-        if (error) throw new Error(error);
-
-        headers.forEach(function (header) {
-          if (header !== bridgingHeader && !~content.indexOf(header)) {
-            if (content.charAt(content.length - 1) !== '\n') {
-              content += '\n';
-            }
-            content += '#import "' + header + '"\n';
-            console.log('Importing', header, 'into', bridgingHeaderPath);
+          if (platformName == 'osx') {
+              bridgingHeaderPath = getBridgingHeaderPath(context, projectPath, osxPlatformVersion);
           }
-        });
-        _fs2.default.writeFileSync(bridgingHeaderPath, content, 'utf-8');
 
-        for (configName in buildConfigs) {
-          if (!COMMENT_KEY.test(configName)) {
-            buildConfig = buildConfigs[configName];
-            if (parseFloat(xcodeProject.getBuildProperty('IPHONEOS_DEPLOYMENT_TARGET', buildConfig.name)) < parseFloat(IOS_MIN_DEPLOYMENT_TARGET)) {
-              xcodeProject.updateBuildProperty('IPHONEOS_DEPLOYMENT_TARGET', IOS_MIN_DEPLOYMENT_TARGET, buildConfig.name);
-              console.log('Update IOS project deployment target to:', IOS_MIN_DEPLOYMENT_TARGET, 'for build configuration', buildConfig.name);
-            }
+          try {
+            _fs2.default.statSync(bridgingHeaderPath);
+          } catch (err) {
+            // If the bridging header doesn't exist, we create it with the minimum
+            // Cordova/CDV.h import.
+            bridgingHeaderContent = ['//', '//  Use this file to import your target\'s public headers that you would like to expose to Swift.', '//', '#import <Cordova/CDV.h>'];
+            _fs2.default.writeFileSync(bridgingHeaderPath, bridgingHeaderContent.join('\n'), { encoding: 'utf-8', flag: 'w' });
+            xcodeProject.addHeaderFile('Bridging-Header.h');
+          }
 
-            if (xcodeProject.getBuildProperty('ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES', buildConfig.name) !== 'YES') {
-              xcodeProject.updateBuildProperty('ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES', 'YES', buildConfig.name);
-              console.log('Update IOS build setting ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES to: YES', 'for build configuration', buildConfig.name);
-            }
+          buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
 
-            if (xcodeProject.getBuildProperty('LD_RUNPATH_SEARCH_PATHS', buildConfig.name) !== '"@executable_path/Frameworks"') {
-              xcodeProject.updateBuildProperty('LD_RUNPATH_SEARCH_PATHS', '"@executable_path/Frameworks"', buildConfig.name);
-              console.log('Update IOS build setting LD_RUNPATH_SEARCH_PATHS to: @executable_path/Frameworks', 'for build configuration', buildConfig.name);
-            }
+          var bridgingHeaderProperty = '"$(PROJECT_DIR)/$(PROJECT_NAME)' + bridgingHeaderPath.split(projectPath)[1] + '"';
 
-            if (typeof xcodeProject.getBuildProperty('SWIFT_VERSION', buildConfig.name) === 'undefined') {
-              if (config.getPreference('UseLegacySwiftLanguageVersion', 'ios')) {
-                xcodeProject.updateBuildProperty('SWIFT_VERSION', '2.3', buildConfig.name);
-                console.log('Use legacy Swift language version', buildConfig.name);
-              } else if (config.getPreference('UseSwiftLanguageVersion', 'ios')) {
-                var swiftVersion = config.getPreference('UseSwiftLanguageVersion', 'ios');
-                xcodeProject.updateBuildProperty('SWIFT_VERSION', swiftVersion, buildConfig.name);
-                console.log('Use Swift language version', swiftVersion);
-              } else {
-                xcodeProject.updateBuildProperty('SWIFT_VERSION', '3.0', buildConfig.name);
-                console.log('Update SWIFT version to 3.0', buildConfig.name);
-              }
-            }
-
-            if (buildConfig.name === 'Debug') {
-              if (xcodeProject.getBuildProperty('SWIFT_OPTIMIZATION_LEVEL', buildConfig.name) !== '"-Onone"') {
-                xcodeProject.updateBuildProperty('SWIFT_OPTIMIZATION_LEVEL', '"-Onone"', buildConfig.name);
-                console.log('Update IOS build setting SWIFT_OPTIMIZATION_LEVEL to: -Onone', 'for build configuration', buildConfig.name);
+          for (configName in buildConfigs) {
+            if (!COMMENT_KEY.test(configName)) {
+              buildConfig = buildConfigs[configName];
+              if (xcodeProject.getBuildProperty('SWIFT_OBJC_BRIDGING_HEADER', buildConfig.name) !== bridgingHeaderProperty) {
+                xcodeProject.updateBuildProperty('SWIFT_OBJC_BRIDGING_HEADER', bridgingHeaderProperty, buildConfig.name);
+                console.log('Update IOS build setting SWIFT_OBJC_BRIDGING_HEADER to:', bridgingHeaderProperty, 'for build configuration', buildConfig.name);
               }
             }
           }
-        }
 
-        _fs2.default.writeFileSync(pbxprojPath, xcodeProject.writeSync());
-      });
+          // Look for any bridging header defined in the plugin
+          glob('**/*Bridging-Header*.h', { cwd: pluginsPath }, function (error, files) {
+            var bridgingHeader = _path2.default.basename(bridgingHeaderPath);
+            var headers = files.map(function (filePath) {
+              return _path2.default.basename(filePath);
+            });
+
+            // if other bridging headers are found, they are imported in the
+            // one already configured in the project.
+            var content = _fs2.default.readFileSync(bridgingHeaderPath, 'utf-8');
+
+            if (error) throw new Error(error);
+
+            headers.forEach(function (header) {
+              if (header !== bridgingHeader && !~content.indexOf(header)) {
+                if (content.charAt(content.length - 1) !== '\n') {
+                  content += '\n';
+                }
+                content += '#import "' + header + '"\n';
+                console.log('Importing', header, 'into', bridgingHeaderPath);
+              }
+            });
+            _fs2.default.writeFileSync(bridgingHeaderPath, content, 'utf-8');
+
+            for (configName in buildConfigs) {
+              if (!COMMENT_KEY.test(configName)) {
+                buildConfig = buildConfigs[configName];
+                if (parseFloat(xcodeProject.getBuildProperty('IPHONEOS_DEPLOYMENT_TARGET', buildConfig.name)) < parseFloat(IOS_MIN_DEPLOYMENT_TARGET)) {
+                  xcodeProject.updateBuildProperty('IPHONEOS_DEPLOYMENT_TARGET', IOS_MIN_DEPLOYMENT_TARGET, buildConfig.name);
+                  console.log('Update IOS project deployment target to:', IOS_MIN_DEPLOYMENT_TARGET, 'for build configuration', buildConfig.name);
+                }
+
+                if (xcodeProject.getBuildProperty('ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES', buildConfig.name) !== 'YES') {
+                  xcodeProject.updateBuildProperty('ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES', 'YES', buildConfig.name);
+                  console.log('Update IOS build setting ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES to: YES', 'for build configuration', buildConfig.name);
+                }
+
+                if (xcodeProject.getBuildProperty('LD_RUNPATH_SEARCH_PATHS', buildConfig.name) !== '"@executable_path/Frameworks"') {
+                  xcodeProject.updateBuildProperty('LD_RUNPATH_SEARCH_PATHS', '"@executable_path/Frameworks"', buildConfig.name);
+                  console.log('Update IOS build setting LD_RUNPATH_SEARCH_PATHS to: @executable_path/Frameworks', 'for build configuration', buildConfig.name);
+                }
+
+                if (typeof xcodeProject.getBuildProperty('SWIFT_VERSION', buildConfig.name) === 'undefined') {
+                  if (config.getPreference('UseLegacySwiftLanguageVersion', 'ios')) {
+                    xcodeProject.updateBuildProperty('SWIFT_VERSION', '2.3', buildConfig.name);
+                    console.log('Use legacy Swift language version', buildConfig.name);
+                  } else if (config.getPreference('UseSwiftLanguageVersion', 'ios')) {
+                    var swiftVersion = config.getPreference('UseSwiftLanguageVersion', 'ios');
+                    xcodeProject.updateBuildProperty('SWIFT_VERSION', swiftVersion, buildConfig.name);
+                    console.log('Use Swift language version', swiftVersion);
+                  } else {
+                    xcodeProject.updateBuildProperty('SWIFT_VERSION', '3.0', buildConfig.name);
+                    console.log('Update SWIFT version to 3.0', buildConfig.name);
+                  }
+                }
+
+                if (buildConfig.name === 'Debug') {
+                  if (xcodeProject.getBuildProperty('SWIFT_OPTIMIZATION_LEVEL', buildConfig.name) !== '"-Onone"') {
+                    xcodeProject.updateBuildProperty('SWIFT_OPTIMIZATION_LEVEL', '"-Onone"', buildConfig.name);
+                    console.log('Update IOS build setting SWIFT_OPTIMIZATION_LEVEL to: -Onone', 'for build configuration', buildConfig.name);
+                  }
+                }
+              }
+            }
+
+            _fs2.default.writeFileSync(pbxprojPath, xcodeProject.writeSync());
+          });
+        }
+      }
     });
   }
 };
