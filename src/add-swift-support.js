@@ -12,24 +12,25 @@
 *
 *  - It updates the ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES build setting to YES.
 *
-*  - It updates the SWIFT_VERSION to 3.0.
+*  - It updates the SWIFT_VERSION to 4.0.
 */
 
-import fs from 'fs';
-import path from 'path';
-import xcode from 'xcode';
-import childProcess from 'child_process';
+const fs = require('fs');
+const path = require('path');
+const xcode = require('xcode');
+const childProcess = require('child_process');
+const semver = require('semver');
+const glob = require('glob');
 
-export default (context) => {
+module.exports = context => {
   const projectRoot = context.opts.projectRoot;
-  const glob = context.requireCordovaModule('glob');
 
   // This script has to be executed depending on the command line arguments, not
   // on the hook execution cycle.
   if ((context.hook === 'after_platform_add' && context.cmdLine.includes('platform add')) ||
-  (context.hook === 'after_prepare' && context.cmdLine.includes('prepare')) ||
-  (context.hook === 'after_plugin_add' && context.cmdLine.includes('plugin add'))) {
-    getPlatformVersionsFromFileSystem(context, projectRoot).then((platformVersions) => {
+    (context.hook === 'after_prepare' && context.cmdLine.includes('prepare')) ||
+    (context.hook === 'after_plugin_add' && context.cmdLine.includes('plugin add'))) {
+    getPlatformVersionsFromFileSystem(context, projectRoot).then(platformVersions => {
       const IOS_MIN_DEPLOYMENT_TARGET = '7.0';
       const platformPath = path.join(projectRoot, 'platforms', 'ios');
       const config = getConfigParser(context, path.join(projectRoot, 'config.xml'));
@@ -66,17 +67,17 @@ export default (context) => {
 
       xcodeProject.parseSync();
 
-      bridgingHeaderPath = getBridgingHeaderPath(context, projectPath, iosPlatformVersion);
+      bridgingHeaderPath = getBridgingHeaderPath(projectPath, iosPlatformVersion);
 
       try {
         fs.statSync(bridgingHeaderPath);
       } catch (err) {
         // If the bridging header doesn't exist, we create it with the minimum
         // Cordova/CDV.h import.
-        bridgingHeaderContent = [ '//',
+        bridgingHeaderContent = ['//',
           '//  Use this file to import your target\'s public headers that you would like to expose to Swift.',
           '//',
-          '#import <Cordova/CDV.h>' ];
+          '#import <Cordova/CDV.h>'];
         fs.writeFileSync(bridgingHeaderPath, bridgingHeaderContent.join('\n'), { encoding: 'utf-8', flag: 'w' });
         xcodeProject.addHeaderFile('Bridging-Header.h');
       }
@@ -98,9 +99,7 @@ export default (context) => {
       // Look for any bridging header defined in the plugin
       glob('**/*Bridging-Header*.h', { cwd: pluginsPath }, (error, files) => {
         const bridgingHeader = path.basename(bridgingHeaderPath);
-        const headers = files.map((filePath) => {
-          return path.basename(filePath);
-        });
+        const headers = files.map((filePath) => path.basename(filePath));
 
         // if other bridging headers are found, they are imported in the
         // one already configured in the project.
@@ -146,8 +145,8 @@ export default (context) => {
                 xcodeProject.updateBuildProperty('SWIFT_VERSION', swiftVersion, buildConfig.name);
                 console.log('Use Swift language version', swiftVersion);
               } else {
-                xcodeProject.updateBuildProperty('SWIFT_VERSION', '3.0', buildConfig.name);
-                console.log('Update SWIFT version to 3.0', buildConfig.name);
+                xcodeProject.updateBuildProperty('SWIFT_VERSION', '4.0', buildConfig.name);
+                console.log('Update SWIFT version to 4.0', buildConfig.name);
               }
             }
 
@@ -167,7 +166,6 @@ export default (context) => {
 };
 
 const getConfigParser = (context, configPath) => {
-  const semver = context.requireCordovaModule('semver');
   let ConfigParser;
 
   if (semver.lt(context.opts.cordova.version, '5.4.0')) {
@@ -179,8 +177,7 @@ const getConfigParser = (context, configPath) => {
   return new ConfigParser(configPath);
 };
 
-const getBridgingHeaderPath = (context, projectPath, iosPlatformVersion) => {
-  const semver = context.requireCordovaModule('semver');
+const getBridgingHeaderPath = (projectPath, iosPlatformVersion) => {
   let bridgingHeaderPath;
   if (semver.lt(iosPlatformVersion, '4.0.0')) {
     bridgingHeaderPath = path.posix.join(projectPath, 'Plugins', 'Bridging-Header.h');
@@ -193,19 +190,25 @@ const getBridgingHeaderPath = (context, projectPath, iosPlatformVersion) => {
 
 const getPlatformVersionsFromFileSystem = (context, projectRoot) => {
   const cordovaUtil = context.requireCordovaModule('cordova-lib/src/cordova/util');
-  const Q = context.requireCordovaModule('q');
   const platformsOnFs = cordovaUtil.listPlatforms(projectRoot);
-  const platformVersions = platformsOnFs.map((platform) => {
+  const platformVersions = platformsOnFs.map(platform => {
     const script = path.join(projectRoot, 'platforms', platform, 'cordova', 'version');
-    return Q.ninvoke(childProcess, 'exec', `"${script}"`, {}).then((result) => {
-      const version = result[0];
-      const versionCleaned = version.replace(/\r?\n|\r/g, '');
-      return {platform: platform, version: versionCleaned};
+    return new Promise((resolve, reject) => {
+      childProcess.exec(script, {}, (error, stdout, _) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(stdout.trim());
+      });
+    }).then(result => {
+      const version = result.replace(/\r?\n|\r/g, '');
+      return { platform, version };
     }, (error) => {
       console.log(error);
       process.exit(1);
     });
   });
 
-  return Q.all(platformVersions);
+  return Promise.all(platformVersions);
 };
