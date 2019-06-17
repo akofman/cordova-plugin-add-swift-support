@@ -29,6 +29,10 @@ As an example you can have a look at this [plugin](https://github.com/akofman/co
 
 If the `cordova-plugin-add-swift-support` plugin is already installed to your project, then you can add your own Swift plugin as usual, its prefixed Bridging-Header will be automatically found and merged.
 
+If you have some targets in your project that don't need support for a bridging header (e.g. watch app written completely in Swift with no Objective-C dependencies), you can configure excluded targets in a comma-separated list as follows:
+
+`<preference name="SwiftOnlyTargets" value="WatchExtension,TodayExtension" />`
+
 ## Contributing
 
 The src folder contains ECMAScript 2015 source files, the minimum Node.js version is `6` (Boron).
