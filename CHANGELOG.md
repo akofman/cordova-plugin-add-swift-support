@@ -1,5 +1,15 @@
 # Change Log
 
+## [2.0.2-dev-1.0](https://github.com/akofman/cordova-plugin-add-swift-support/tree/2.0.2-dev-1.0) (2021-07-27)
+[Full Changelog](https://github.com/akofman/cordova-plugin-add-swift-support/compare/2.0.1...2.0.2-dev-1.0)
+
+**Merged pull requests:**
+
+- every plugin can change project.pbxproj file,
+- async operations can be exist with random queue, (promise/callback and etc.)
+- every part with xcode.project should be existed only in one task (micro)
+
+
 ## [2.0.2](https://github.com/akofman/cordova-plugin-add-swift-support/tree/2.0.2) (2019-04-05)
 [Full Changelog](https://github.com/akofman/cordova-plugin-add-swift-support/compare/2.0.1...2.0.2)
 

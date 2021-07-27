@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="cordova-plugin-add-swift-support" version="2.0.2">
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="cordova-plugin-add-swift-support" version="2.0.2-dev-1.0">
 
   <name>AddSwiftSupport</name>
   <license>Apache 2.0</license>
