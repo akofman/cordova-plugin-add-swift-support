@@ -188,27 +188,36 @@ const getBridgingHeaderPath = (projectPath, iosPlatformVersion) => {
   return bridgingHeaderPath;
 };
 
+
 const getPlatformVersionsFromFileSystem = (context, projectRoot) => {
   const cordovaUtil = context.requireCordovaModule('cordova-lib/src/cordova/util');
   const platformsOnFs = cordovaUtil.listPlatforms(projectRoot);
   const platformVersions = platformsOnFs.map(platform => {
-    const script = path.join(projectRoot, 'platforms', platform, 'cordova', 'version');
-    return new Promise((resolve, reject) => {
-      childProcess.exec('"' + script + '"', {}, (error, stdout, _) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(stdout.trim());
+    if (platform === 'ios') {
+      return new Promise((resolve, reject) => {
+        const script = path.join(projectRoot, 'platforms', platform, 'cordova', 'version');
+        childProcess.exec('"' + script + '"', {}, (error, stdout, _) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(stdout.trim());
+        });
+      }).then(result => {
+        const version = result.replace(/\r?\n|\r/g, '');
+        return { platform, version };
+      }, (error) => {
+        console.log(error);
+        process.exit(1);
       });
-    }).then(result => {
-      const version = result.replace(/\r?\n|\r/g, '');
-      return { platform, version };
-    }, (error) => {
-      console.log(error);
-      process.exit(1);
-    });
+    } else {
+      return new Promise((resolve, reject) => {
+        //-- Version is ignored if not iOS so getting the version doesn't apply
+        resolve({ platform, version: "" });
+      });
+    }
   });
 
   return Promise.all(platformVersions);
 };
+
